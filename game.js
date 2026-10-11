@@ -18,6 +18,7 @@ const COLORS = [
   '#4db6ac', // U - teal
   '#aed581', // Y - lime
   '#ffb74d', // X - amber (cruz)
+  '#ff1744', // B - red (bomba)
 ];
 
 const PIECES = [
@@ -34,7 +35,12 @@ const PIECES = [
   [[10,0,10],[10,0,10],[10,10,10]],            // U
   [[11,0,11],[0,11,0],[0,11,0]],             // Y
   [[0,12,0],[12,12,12],[0,12,0]],            // X (cruz)
+  [[13]],                                      // B (bomba 1x1, power-up)
 ];
+
+const BOMB_TYPE = 13;
+const BOMB_EVERY = 5;
+const BOMB_CELL_SCORE = 10;
 
 const LINE_SCORES = [0, 100, 300, 500, 800];
 
@@ -51,14 +57,17 @@ const overlayScore = document.getElementById('overlay-score');
 const restartBtn = document.getElementById('restart-btn');
 const themeBtn = document.getElementById('theme-toggle');
 
-let board, current, next, score, lines, level, paused, gameOver, lastTime, dropAccum, dropInterval, animId;
+let board, current, next, score, lines, level, paused, gameOver, lastTime, dropAccum, dropInterval, animId, bombsAwarded, bombPending;
 
 function createBoard() {
   return Array.from({ length: ROWS }, () => new Array(COLS).fill(0));
 }
 
 function randomPiece() {
-  const type = Math.floor(Math.random() * (PIECES.length - 1)) + 1;
+  return makePiece(Math.floor(Math.random() * (BOMB_TYPE - 1)) + 1);
+}
+
+function makePiece(type) {
   const shape = PIECES[type].map(row => [...row]);
   return { type, shape, x: Math.floor(COLS / 2) - Math.floor(shape[0].length / 2), y: 0 };
 }
@@ -119,6 +128,10 @@ function clearLines() {
     score += (LINE_SCORES[cleared] || 0) * level;
     level = Math.floor(lines / 10) + 1;
     dropInterval = Math.max(100, 1000 - (level - 1) * 90);
+    if (Math.floor(lines / BOMB_EVERY) > bombsAwarded) {
+      bombsAwarded = Math.floor(lines / BOMB_EVERY);
+      bombPending = true;
+    }
     updateHUD();
   }
 }
@@ -146,15 +159,35 @@ function softDrop() {
   }
 }
 
+function explode(cx, cy) {
+  let destroyed = 0;
+  for (let r = cy - 1; r <= cy + 1; r++) {
+    for (let c = cx - 1; c <= cx + 1; c++) {
+      if (r < 0 || r >= ROWS || c < 0 || c >= COLS) continue;
+      if (board[r][c]) {
+        board[r][c] = 0;
+        destroyed++;
+      }
+    }
+  }
+  score += destroyed * BOMB_CELL_SCORE * level;
+  updateHUD();
+}
+
 function lockPiece() {
-  merge();
-  clearLines();
+  if (current.type === BOMB_TYPE) {
+    explode(current.x, current.y);
+  } else {
+    merge();
+    clearLines();
+  }
   spawn();
 }
 
 function spawn() {
   current = next;
-  next = randomPiece();
+  next = bombPending ? makePiece(BOMB_TYPE) : randomPiece();
+  bombPending = false;
   if (collide(current.shape, current.x, current.y)) {
     endGame();
   }
@@ -171,6 +204,18 @@ function drawBlock(context, x, y, colorIndex, size, alpha) {
   if (!colorIndex) return;
   const color = COLORS[colorIndex];
   context.globalAlpha = alpha ?? 1;
+  if (colorIndex === BOMB_TYPE) {
+    context.fillStyle = '#212121';
+    context.beginPath();
+    context.arc(x * size + size / 2, y * size + size / 2, size / 2 - 2, 0, Math.PI * 2);
+    context.fill();
+    context.fillStyle = color;
+    context.beginPath();
+    context.arc(x * size + size / 2, y * size + size / 2, size / 5, 0, Math.PI * 2);
+    context.fill();
+    context.globalAlpha = 1;
+    return;
+  }
   context.fillStyle = color;
   context.fillRect(x * size + 1, y * size + 1, size - 2, size - 2);
   // highlight
@@ -207,6 +252,15 @@ function draw() {
 
   // ghost
   const gy = ghostY();
+  if (current.type === BOMB_TYPE) {
+    ctx.globalAlpha = 0.2;
+    ctx.fillStyle = COLORS[BOMB_TYPE];
+    for (let r = gy - 1; r <= gy + 1; r++)
+      for (let c = current.x - 1; c <= current.x + 1; c++)
+        if (r >= 0 && r < ROWS && c >= 0 && c < COLS)
+          ctx.fillRect(c * BLOCK + 1, r * BLOCK + 1, BLOCK - 2, BLOCK - 2);
+    ctx.globalAlpha = 1;
+  }
   for (let r = 0; r < current.shape.length; r++)
     for (let c = 0; c < current.shape[r].length; c++)
       if (current.shape[r][c])
@@ -273,6 +327,8 @@ function init() {
   score = 0;
   lines = 0;
   level = 1;
+  bombsAwarded = 0;
+  bombPending = false;
   paused = false;
   gameOver = false;
   dropInterval = 1000;
