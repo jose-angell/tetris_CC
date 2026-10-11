@@ -17,6 +17,7 @@ const COLORS = [
   '#f06292', // P - pink (punto)
   '#4db6ac', // U - teal
   '#aed581', // Y - lime
+  '#ffb74d', // X - amber (cruz)
 ];
 
 const PIECES = [
@@ -32,6 +33,7 @@ const PIECES = [
   [[9]],                                       // P (punto 1x1)
   [[10,0,10],[10,0,10],[10,10,10]],            // U
   [[11,0,11],[0,11,0],[0,11,0]],             // Y
+  [[0,12,0],[12,12,12],[0,12,0]],            // X (cruz)
 ];
 
 const LINE_SCORES = [0, 100, 300, 500, 800];

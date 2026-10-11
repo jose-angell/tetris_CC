@@ -34,7 +34,7 @@ Implementación del clásico **Tetris** en JavaScript vanilla, usando HTML5 Canv
 Es una versión jugable del Tetris clásico con todas las mecánicas que esperarías:
 
 - Tablero de **10 × 20** celdas.
-- Las **7 piezas estándar** (I, O, T, S, Z, J, L) con colores diferenciados, más la **pieza tuerca** (anillo 3×3 con el centro vacío) como reto y la **pieza punto** (un único bloque 1×1) la **pieza U** (forma de U en una matriz 3×3) y la **pieza Y** (forma de Y en una matriz 3×3).
+- Las **7 piezas estándar** (I, O, T, S, Z, J, L) con colores diferenciados, más la **pieza tuerca** (anillo 3×3 con el centro vacío) como reto y la **pieza punto** (un único bloque 1×1), la **pieza U** (forma de U en una matriz 3×3), la **pieza Y** (forma de Y en una matriz 3×3) y la **pieza cruz** (forma de + en una matriz 3×3).
 - **Rotación** con _wall kicks_ básicos (pequeños desplazamientos para que la pieza pueda rotar pegada a la pared).
 - **Soft drop** (bajada acelerada) y **hard drop** (caída instantánea).
 - **Pieza fantasma** (_ghost piece_): muestra dónde aterrizará la pieza actual.
