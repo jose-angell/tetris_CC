@@ -27,6 +27,8 @@ Bomb power-up: every `BOMB_EVERY` (5) cleared lines, `clearLines()` sets `bombPe
 
 Rayo power-up: every `RAYO_EVERY` (7) cleared lines, `addLines()` (shared by `clearLines()` and `zap()`) sets `rayPending` (tracked against `raysAwarded`), and `spawn()` makes the new `next` a 1x1 Rayo (`RAYO_H` 14; bomb has priority if both are pending). Up/X rotate toggles it between `RAYO_H` (clears the row, with gravity, counts as 1 line) and `RAYO_V` (empties the column, no gravity) in `tryRotate()`. `lockPiece()` calls `zap()`; `draw()` shades the affected row/column as the ghost.
 
-Scoring: `LINE_SCORES[cleared] * level`, +1 per soft-drop cell, +2 per hard-drop cell, +`BOMB_CELL_SCORE * level` per cell destroyed by a bomb, +`RAYO_CELL_SCORE * level` per cell destroyed by a Rayo. Level = `floor(lines/10)+1`; `dropInterval = max(100, 1000 - (level-1)*90)`.
+Tinte power-up: every `TINTE_EVERY` (9) cleared lines, `addLines()` sets `tintePending` (tracked against `tintesAwarded`), and `spawn()` makes the new `next` a 1x1 Tinte (`TINTE_TYPE` 16; priority bomb > rayo > tinte). On lock, `tint()` takes the color of the block directly below (`tintTarget()`; none if floor or already wild) and converts every board cell of that color to `WILD` (17, board-only, `PIECES[17]` is null), then calls `clearLines()`. `isRowClear()` clears a row when its empty cells ≤ its `WILD` cells. `draw()` highlights the cells that will be converted as the ghost.
+
+Scoring: `LINE_SCORES[cleared] * level`, +1 per soft-drop cell, +2 per hard-drop cell, +`BOMB_CELL_SCORE * level` per cell destroyed by a bomb, +`RAYO_CELL_SCORE * level` per cell destroyed by a Rayo, +`TINTE_CELL_SCORE * level` per cell converted by a Tinte. Level = `floor(lines/10)+1`; `dropInterval = max(100, 1000 - (level-1)*90)`.
 
 Board canvas size (300x600) in `index.html` must stay consistent with `COLS * BLOCK` / `ROWS * BLOCK` in `game.js`.
