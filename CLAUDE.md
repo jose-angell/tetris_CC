@@ -25,6 +25,8 @@ Three files: `index.html` (DOM + canvases), `style.css`, and `game.js` (all logi
 
 Bomb power-up: every `BOMB_EVERY` (5) cleared lines, `clearLines()` sets `bombPending` (tracked against `bombsAwarded`), and `spawn()` makes the new `next` a 1x1 bomb (`BOMB_TYPE` 13, excluded from `randomPiece`'s draw; built via `makePiece`). When a bomb locks, `lockPiece()` calls `explode()` instead of merge/clearLines: it clears the 3x3 around the bomb with no gravity. `draw()` shows the 3x3 blast area as the ghost.
 
-Scoring: `LINE_SCORES[cleared] * level`, +1 per soft-drop cell, +2 per hard-drop cell, +`BOMB_CELL_SCORE * level` per cell destroyed by a bomb. Level = `floor(lines/10)+1`; `dropInterval = max(100, 1000 - (level-1)*90)`.
+Rayo power-up: every `RAYO_EVERY` (7) cleared lines, `addLines()` (shared by `clearLines()` and `zap()`) sets `rayPending` (tracked against `raysAwarded`), and `spawn()` makes the new `next` a 1x1 Rayo (`RAYO_H` 14; bomb has priority if both are pending). Up/X rotate toggles it between `RAYO_H` (clears the row, with gravity, counts as 1 line) and `RAYO_V` (empties the column, no gravity) in `tryRotate()`. `lockPiece()` calls `zap()`; `draw()` shades the affected row/column as the ghost.
+
+Scoring: `LINE_SCORES[cleared] * level`, +1 per soft-drop cell, +2 per hard-drop cell, +`BOMB_CELL_SCORE * level` per cell destroyed by a bomb, +`RAYO_CELL_SCORE * level` per cell destroyed by a Rayo. Level = `floor(lines/10)+1`; `dropInterval = max(100, 1000 - (level-1)*90)`.
 
 Board canvas size (300x600) in `index.html` must stay consistent with `COLS * BLOCK` / `ROWS * BLOCK` in `game.js`.

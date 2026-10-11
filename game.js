@@ -19,6 +19,8 @@ const COLORS = [
   '#aed581', // Y - lime
   '#ffb74d', // X - amber (cruz)
   '#ff1744', // B - red (bomba)
+  '#ffee58', // R - yellow (rayo horizontal)
+  '#ffee58', // R - yellow (rayo vertical)
 ];
 
 const PIECES = [
@@ -36,11 +38,18 @@ const PIECES = [
   [[11,0,11],[0,11,0],[0,11,0]],             // Y
   [[0,12,0],[12,12,12],[0,12,0]],            // X (cruz)
   [[13]],                                      // B (bomba 1x1, power-up)
+  [[14]],                                      // R horizontal (rayo 1x1, power-up)
+  [[15]],                                      // R vertical (rayo 1x1, power-up)
 ];
 
 const BOMB_TYPE = 13;
 const BOMB_EVERY = 5;
 const BOMB_CELL_SCORE = 10;
+
+const RAYO_H = 14;
+const RAYO_V = 15;
+const RAYO_EVERY = 7;
+const RAYO_CELL_SCORE = 10;
 
 const LINE_SCORES = [0, 100, 300, 500, 800];
 
@@ -57,7 +66,7 @@ const overlayScore = document.getElementById('overlay-score');
 const restartBtn = document.getElementById('restart-btn');
 const themeBtn = document.getElementById('theme-toggle');
 
-let board, current, next, score, lines, level, paused, gameOver, lastTime, dropAccum, dropInterval, animId, bombsAwarded, bombPending;
+let board, current, next, score, lines, level, paused, gameOver, lastTime, dropAccum, dropInterval, animId, bombsAwarded, bombPending, raysAwarded, rayPending;
 
 function createBoard() {
   return Array.from({ length: ROWS }, () => new Array(COLS).fill(0));
@@ -95,6 +104,11 @@ function rotateCW(shape) {
 }
 
 function tryRotate() {
+  if (current.type === RAYO_H || current.type === RAYO_V) {
+    current.type = current.type === RAYO_H ? RAYO_V : RAYO_H;
+    current.shape = [[current.type]];
+    return;
+  }
   const rotated = rotateCW(current.shape);
   const kicks = [0, -1, 1, -2, 2];
   for (const kick of kicks) {
@@ -124,16 +138,24 @@ function clearLines() {
     }
   }
   if (cleared) {
-    lines += cleared;
     score += (LINE_SCORES[cleared] || 0) * level;
-    level = Math.floor(lines / 10) + 1;
-    dropInterval = Math.max(100, 1000 - (level - 1) * 90);
-    if (Math.floor(lines / BOMB_EVERY) > bombsAwarded) {
-      bombsAwarded = Math.floor(lines / BOMB_EVERY);
-      bombPending = true;
-    }
-    updateHUD();
+    addLines(cleared);
   }
+}
+
+function addLines(n) {
+  lines += n;
+  level = Math.floor(lines / 10) + 1;
+  dropInterval = Math.max(100, 1000 - (level - 1) * 90);
+  if (Math.floor(lines / BOMB_EVERY) > bombsAwarded) {
+    bombsAwarded = Math.floor(lines / BOMB_EVERY);
+    bombPending = true;
+  }
+  if (Math.floor(lines / RAYO_EVERY) > raysAwarded) {
+    raysAwarded = Math.floor(lines / RAYO_EVERY);
+    rayPending = true;
+  }
+  updateHUD();
 }
 
 function ghostY() {
@@ -174,9 +196,32 @@ function explode(cx, cy) {
   updateHUD();
 }
 
+function zap(cx, cy) {
+  let destroyed = 0;
+  if (current.type === RAYO_H) {
+    destroyed = board[cy].filter(v => v !== 0).length;
+    if (destroyed) {
+      board.splice(cy, 1);
+      board.unshift(new Array(COLS).fill(0));
+    }
+  } else {
+    for (let r = 0; r < ROWS; r++) {
+      if (board[r][cx]) {
+        board[r][cx] = 0;
+        destroyed++;
+      }
+    }
+  }
+  score += destroyed * RAYO_CELL_SCORE * level;
+  if (current.type === RAYO_H && destroyed) addLines(1);
+  else updateHUD();
+}
+
 function lockPiece() {
   if (current.type === BOMB_TYPE) {
     explode(current.x, current.y);
+  } else if (current.type === RAYO_H || current.type === RAYO_V) {
+    zap(current.x, current.y);
   } else {
     merge();
     clearLines();
@@ -186,8 +231,15 @@ function lockPiece() {
 
 function spawn() {
   current = next;
-  next = bombPending ? makePiece(BOMB_TYPE) : randomPiece();
-  bombPending = false;
+  if (bombPending) {
+    next = makePiece(BOMB_TYPE);
+    bombPending = false;
+  } else if (rayPending) {
+    next = makePiece(RAYO_H);
+    rayPending = false;
+  } else {
+    next = randomPiece();
+  }
   if (collide(current.shape, current.x, current.y)) {
     endGame();
   }
@@ -213,6 +265,25 @@ function drawBlock(context, x, y, colorIndex, size, alpha) {
     context.beginPath();
     context.arc(x * size + size / 2, y * size + size / 2, size / 5, 0, Math.PI * 2);
     context.fill();
+    context.globalAlpha = 1;
+    return;
+  }
+  if (colorIndex === RAYO_H || colorIndex === RAYO_V) {
+    const px = x * size, py = y * size;
+    context.fillStyle = '#212121';
+    context.fillRect(px + 1, py + 1, size - 2, size - 2);
+    context.fillStyle = color;
+    if (colorIndex === RAYO_H) context.fillRect(px + 3, py + size / 2 - 2, size - 6, 4);
+    else context.fillRect(px + size / 2 - 2, py + 3, 4, size - 6);
+    // zigzag de rayo
+    context.strokeStyle = color;
+    context.lineWidth = 2;
+    context.beginPath();
+    context.moveTo(px + size * 0.6, py + 4);
+    context.lineTo(px + size * 0.35, py + size * 0.5);
+    context.lineTo(px + size * 0.65, py + size * 0.5);
+    context.lineTo(px + size * 0.4, py + size - 4);
+    context.stroke();
     context.globalAlpha = 1;
     return;
   }
@@ -259,6 +330,12 @@ function draw() {
       for (let c = current.x - 1; c <= current.x + 1; c++)
         if (r >= 0 && r < ROWS && c >= 0 && c < COLS)
           ctx.fillRect(c * BLOCK + 1, r * BLOCK + 1, BLOCK - 2, BLOCK - 2);
+    ctx.globalAlpha = 1;
+  } else if (current.type === RAYO_H || current.type === RAYO_V) {
+    ctx.globalAlpha = 0.2;
+    ctx.fillStyle = COLORS[current.type];
+    if (current.type === RAYO_H) ctx.fillRect(1, gy * BLOCK + 1, COLS * BLOCK - 2, BLOCK - 2);
+    else ctx.fillRect(current.x * BLOCK + 1, 1, BLOCK - 2, ROWS * BLOCK - 2);
     ctx.globalAlpha = 1;
   }
   for (let r = 0; r < current.shape.length; r++)
@@ -329,6 +406,8 @@ function init() {
   level = 1;
   bombsAwarded = 0;
   bombPending = false;
+  raysAwarded = 0;
+  rayPending = false;
   paused = false;
   gameOver = false;
   dropInterval = 1000;
