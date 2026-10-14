@@ -77,6 +77,7 @@ const CHALLENGES = [
   { id: 'tetris', name: 'Tetris', desc: 'Limpia 4 líneas de golpe en 2:00', goal: 'tetris', target: 1, timeMs: 120000, bonus: 3000, medal: '💎' },
   { id: 'maraton', name: 'Maratón', desc: 'Limpia 40 líneas en 2:00', goal: 'lines', target: 40, timeMs: 120000, bonus: 5000, medal: '🥇' },
   { id: 'supervivencia', name: 'Supervivencia', desc: 'Sobrevive 1:30 con basura subiendo cada 10 s', goal: 'survive', target: 90, timeMs: 90000, bonus: 4000, medal: '🛡️', garbageEvery: 10000 },
+  { id: 'invisible', name: 'Invisible', desc: 'Limpia 10 líneas en 2:00; las piezas desaparecen al caer', goal: 'lines', target: 10, timeMs: 120000, bonus: 4500, medal: '👻', invisible: true },
   {
     id: 'obstaculos', name: 'Obstáculos', desc: 'Limpia 10 líneas en 2:00 con el tablero ya con bloques', goal: 'lines', target: 10, timeMs: 120000, bonus: 3500, medal: '🧱',
     preset: [
@@ -91,6 +92,7 @@ const CHALLENGES = [
 ];
 const BANNER_MS = 2500;
 const GARBAGE = 19;
+const REVEAL_MS = 600;
 
 const canvas = document.getElementById('board');
 const ctx = canvas.getContext('2d');
@@ -118,7 +120,7 @@ const playClasicoBtn = document.getElementById('play-clasico');
 const playDesafioBtn = document.getElementById('play-desafio');
 
 let board, current, next, score, lines, level, paused, gameOver, lastTime, dropAccum, dropInterval, animId, bombsAwarded, bombPending, raysAwarded, rayPending, tintesAwarded, tintePending, congelarAwarded, congelarPending, freezeLeft;
-let mode = 'clasico', challengeQueue = [], challengeLeft = 0, challengeStartLines = 0, challengeStartScore = 0, tetrisCount = 0, bannerLeft = 0, bannerText = '', bannerMedal = '', medals = {}, inMenu = true, garbageAccum = 0;
+let mode = 'clasico', challengeQueue = [], challengeLeft = 0, challengeStartLines = 0, challengeStartScore = 0, tetrisCount = 0, bannerLeft = 0, bannerText = '', bannerMedal = '', medals = {}, inMenu = true, garbageAccum = 0, revealLeft = 0;
 
 function createBoard() {
   return Array.from({ length: ROWS }, () => new Array(COLS).fill(0));
@@ -204,6 +206,7 @@ function clearLines() {
 
 function addLines(n) {
   lines += n;
+  revealLeft = REVEAL_MS;
   level = Math.floor(lines / 10) + 1;
   dropInterval = Math.max(100, 1000 - (level - 1) * 90);
   if (Math.floor(lines / BOMB_EVERY) > bombsAwarded) {
@@ -455,47 +458,57 @@ function drawGrid() {
   }
 }
 
+function boardHidden() {
+  return mode === 'desafio' && bannerLeft <= 0 && challengeQueue.length > 0 &&
+    !!currentChallenge().invisible && revealLeft <= 0;
+}
+
 function draw() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   drawGrid();
 
-  // board
-  for (let r = 0; r < ROWS; r++)
-    for (let c = 0; c < COLS; c++)
-      drawBlock(ctx, c, r, board[r][c], BLOCK);
+  const hidden = boardHidden();
 
-  // ghost
+  // board
+  if (!hidden)
+    for (let r = 0; r < ROWS; r++)
+      for (let c = 0; c < COLS; c++)
+        drawBlock(ctx, c, r, board[r][c], BLOCK);
+
+  // ghost (oculto en el reto Invisible)
   const gy = ghostY();
-  if (current.type === BOMB_TYPE) {
-    ctx.globalAlpha = 0.2;
-    ctx.fillStyle = COLORS[BOMB_TYPE];
-    for (let r = gy - 1; r <= gy + 1; r++)
-      for (let c = current.x - 1; c <= current.x + 1; c++)
-        if (r >= 0 && r < ROWS && c >= 0 && c < COLS)
-          ctx.fillRect(c * BLOCK + 1, r * BLOCK + 1, BLOCK - 2, BLOCK - 2);
-    ctx.globalAlpha = 1;
-  } else if (current.type === RAYO_H || current.type === RAYO_V) {
-    ctx.globalAlpha = 0.2;
-    ctx.fillStyle = COLORS[current.type];
-    if (current.type === RAYO_H) ctx.fillRect(1, gy * BLOCK + 1, COLS * BLOCK - 2, BLOCK - 2);
-    else ctx.fillRect(current.x * BLOCK + 1, 1, BLOCK - 2, ROWS * BLOCK - 2);
-    ctx.globalAlpha = 1;
-  } else if (current.type === TINTE_TYPE) {
-    const target = tintTarget(current.x, gy);
-    if (target) {
-      ctx.globalAlpha = 0.45;
-      ctx.fillStyle = '#ffffff';
-      for (let r = 0; r < ROWS; r++)
-        for (let c = 0; c < COLS; c++)
-          if (board[r][c] === target)
+  if (!hidden) {
+    if (current.type === BOMB_TYPE) {
+      ctx.globalAlpha = 0.2;
+      ctx.fillStyle = COLORS[BOMB_TYPE];
+      for (let r = gy - 1; r <= gy + 1; r++)
+        for (let c = current.x - 1; c <= current.x + 1; c++)
+          if (r >= 0 && r < ROWS && c >= 0 && c < COLS)
             ctx.fillRect(c * BLOCK + 1, r * BLOCK + 1, BLOCK - 2, BLOCK - 2);
       ctx.globalAlpha = 1;
+    } else if (current.type === RAYO_H || current.type === RAYO_V) {
+      ctx.globalAlpha = 0.2;
+      ctx.fillStyle = COLORS[current.type];
+      if (current.type === RAYO_H) ctx.fillRect(1, gy * BLOCK + 1, COLS * BLOCK - 2, BLOCK - 2);
+      else ctx.fillRect(current.x * BLOCK + 1, 1, BLOCK - 2, ROWS * BLOCK - 2);
+      ctx.globalAlpha = 1;
+    } else if (current.type === TINTE_TYPE) {
+      const target = tintTarget(current.x, gy);
+      if (target) {
+        ctx.globalAlpha = 0.45;
+        ctx.fillStyle = '#ffffff';
+        for (let r = 0; r < ROWS; r++)
+          for (let c = 0; c < COLS; c++)
+            if (board[r][c] === target)
+              ctx.fillRect(c * BLOCK + 1, r * BLOCK + 1, BLOCK - 2, BLOCK - 2);
+        ctx.globalAlpha = 1;
+      }
     }
+    for (let r = 0; r < current.shape.length; r++)
+      for (let c = 0; c < current.shape[r].length; c++)
+        if (current.shape[r][c])
+          drawBlock(ctx, current.x + c, gy + r, current.shape[r][c], BLOCK, 0.2);
   }
-  for (let r = 0; r < current.shape.length; r++)
-    for (let c = 0; c < current.shape[r].length; c++)
-      if (current.shape[r][c])
-        drawBlock(ctx, current.x + c, gy + r, current.shape[r][c], BLOCK, 0.2);
 
   // current piece
   for (let r = 0; r < current.shape.length; r++)
@@ -616,6 +629,7 @@ function startChallenge() {
   challengeStartScore = score;
   tetrisCount = 0;
   garbageAccum = 0;
+  revealLeft = 0;
   bannerLeft = 0;
   next = randomPiece();
   spawn();
@@ -689,6 +703,7 @@ function loop(ts) {
   const dt = ts - lastTime;
   lastTime = ts;
   if (mode === 'desafio') {
+    revealLeft = Math.max(0, revealLeft - dt);
     if (bannerLeft > 0) {
       bannerLeft -= dt;
       if (bannerLeft <= 0) startChallenge();
