@@ -200,6 +200,124 @@ kbd {
   background: var(--accent-hover);
 }
 
+/* ---- Modo desafío y medallas ---- */
+.overlay-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.secondary-btn {
+  margin-top: 8px;
+  background: transparent;
+  color: var(--accent);
+  border: 1px solid var(--accent);
+  border-radius: 6px;
+  padding: 10px 28px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  letter-spacing: 1px;
+}
+
+.secondary-btn:hover {
+  background: var(--accent);
+  color: var(--accent-text);
+}
+
+.menu {
+  z-index: 1;
+}
+
+.menu-box {
+  gap: 14px;
+}
+
+.menu-title {
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: 3px;
+  color: var(--accent);
+}
+
+.menu-option {
+  width: 240px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 14px 12px;
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 16px;
+}
+
+.menu-option:hover {
+  border-color: var(--accent);
+}
+
+.menu-option small {
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.menu-medals {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  align-items: center;
+  max-width: 240px;
+}
+
+.menu-medals .medals {
+  justify-content: center;
+}
+
+.challenge[hidden] {
+  display: none;
+}
+
+.challenge-name {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.challenge-desc {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.value.small {
+  font-size: 20px;
+}
+
+.medals {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.medal {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 2px 6px;
+  font-size: 20px;
+  animation: medal-pop 0.4s ease-out;
+}
+
+.no-medals {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+@keyframes medal-pop {
+  from { transform: scale(1.6); }
+  to { transform: scale(1); }
+}
+
 /* ---- Toggle de tema ---- */
 .theme-toggle {
   position: fixed;

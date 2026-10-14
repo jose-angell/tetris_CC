@@ -68,6 +68,15 @@ const FREEZE_MS = 5000;
 
 const LINE_SCORES = [0, 100, 300, 500, 800];
 
+const CHALLENGES = [
+  { id: 'calentamiento', name: 'Calentamiento', desc: 'Limpia 10 líneas en 1:00', goal: 'lines', target: 10, timeMs: 60000, bonus: 1000, medal: '🥉' },
+  { id: 'sprint', name: 'Sprint', desc: 'Limpia 20 líneas en 1:30', goal: 'lines', target: 20, timeMs: 90000, bonus: 2000, medal: '🥈' },
+  { id: 'punteria', name: 'Puntería', desc: 'Haz 5.000 puntos en 1:30', goal: 'score', target: 5000, timeMs: 90000, bonus: 2500, medal: '🎯' },
+  { id: 'tetris', name: 'Tetris', desc: 'Limpia 4 líneas de golpe en 2:00', goal: 'tetris', target: 1, timeMs: 120000, bonus: 3000, medal: '💎' },
+  { id: 'maraton', name: 'Maratón', desc: 'Limpia 40 líneas en 2:00', goal: 'lines', target: 40, timeMs: 120000, bonus: 5000, medal: '🥇' },
+];
+const BANNER_MS = 2500;
+
 const canvas = document.getElementById('board');
 const ctx = canvas.getContext('2d');
 const nextCanvas = document.getElementById('next-canvas');
@@ -80,8 +89,21 @@ const overlayTitle = document.getElementById('overlay-title');
 const overlayScore = document.getElementById('overlay-score');
 const restartBtn = document.getElementById('restart-btn');
 const themeBtn = document.getElementById('theme-toggle');
+const challengeSection = document.getElementById('challenge-section');
+const challengeName = document.getElementById('challenge-name');
+const challengeDesc = document.getElementById('challenge-desc');
+const challengeProgressEl = document.getElementById('challenge-progress');
+const challengeTimeEl = document.getElementById('challenge-time');
+const medalsEl = document.getElementById('medals');
+const medalsSection = document.getElementById('medals-section');
+const menuMedalsEl = document.getElementById('menu-medals');
+const menuEl = document.getElementById('menu');
+const menuBtn = document.getElementById('menu-btn');
+const playClasicoBtn = document.getElementById('play-clasico');
+const playDesafioBtn = document.getElementById('play-desafio');
 
 let board, current, next, score, lines, level, paused, gameOver, lastTime, dropAccum, dropInterval, animId, bombsAwarded, bombPending, raysAwarded, rayPending, tintesAwarded, tintePending, congelarAwarded, congelarPending, freezeLeft;
+let mode = 'clasico', challengeQueue = [], challengeLeft = 0, challengeStartLines = 0, challengeStartScore = 0, tetrisCount = 0, bannerLeft = 0, bannerText = '', bannerMedal = '', medals = {}, inMenu = true;
 
 function createBoard() {
   return Array.from({ length: ROWS }, () => new Array(COLS).fill(0));
@@ -158,6 +180,7 @@ function clearLines() {
       r++;
     }
   }
+  if (cleared >= 4) tetrisCount++;
   if (cleared) {
     score += (LINE_SCORES[cleared] || 0) * level;
     addLines(cleared);
@@ -302,7 +325,8 @@ function spawn() {
     next = randomPiece();
   }
   if (collide(current.shape, current.x, current.y)) {
-    endGame();
+    if (mode === 'desafio') { if (bannerLeft <= 0) failChallenge(); }
+    else endGame();
   }
   drawNext();
 }
@@ -474,6 +498,23 @@ function draw() {
     ctx.textAlign = 'left';
     ctx.fillText(`❄ ${Math.ceil(freezeLeft / 1000)}s`, 8, 22);
   }
+
+  // banner de desafío (logrado / fallido)
+  if (bannerLeft > 0) {
+    const cy = canvas.height / 2;
+    ctx.fillStyle = 'rgba(10, 10, 20, 0.8)';
+    ctx.fillRect(0, cy - 70, canvas.width, 140);
+    ctx.textAlign = 'center';
+    if (bannerMedal) {
+      const pop = 1 + 0.3 * Math.max(0, (bannerLeft - (BANNER_MS - 400)) / 400);
+      ctx.font = `${Math.round(56 * pop)}px sans-serif`;
+      ctx.fillText(bannerMedal, canvas.width / 2, cy - 5);
+    }
+    ctx.fillStyle = bannerMedal ? '#ffd54f' : '#e57373';
+    ctx.font = 'bold 18px sans-serif';
+    ctx.fillText(bannerText, canvas.width / 2, cy + 45);
+    ctx.textAlign = 'left';
+  }
 }
 
 function drawNext() {
@@ -485,6 +526,110 @@ function drawNext() {
   for (let r = 0; r < shape.length; r++)
     for (let c = 0; c < shape[r].length; c++)
       drawBlock(nextCtx, offX + c, offY + r, shape[r][c], NB);
+}
+
+function currentChallenge() {
+  return CHALLENGES[challengeQueue[0]];
+}
+
+function challengeProgress() {
+  const ch = currentChallenge();
+  if (ch.goal === 'lines') return lines - challengeStartLines;
+  if (ch.goal === 'score') return score - challengeStartScore;
+  return tetrisCount;
+}
+
+function formatTime(ms) {
+  const t = Math.ceil(Math.max(0, ms) / 1000);
+  return `${Math.floor(t / 60)}:${String(t % 60).padStart(2, '0')}`;
+}
+
+function updateChallengeHUD() {
+  challengeSection.hidden = mode !== 'desafio';
+  medalsSection.hidden = mode !== 'desafio';
+  if (mode !== 'desafio' || !challengeQueue.length) return;
+  const ch = currentChallenge();
+  challengeName.textContent = `${ch.medal} ${ch.name}`;
+  challengeDesc.textContent = ch.desc;
+  challengeProgressEl.textContent = `${Math.min(challengeProgress(), ch.target)}/${ch.target}`;
+  challengeTimeEl.textContent = formatTime(challengeLeft);
+}
+
+function renderMedals() {
+  for (const el of [medalsEl, menuMedalsEl]) renderMedalsIn(el);
+}
+
+function renderMedalsIn(el) {
+  el.textContent = '';
+  let any = false;
+  for (const ch of CHALLENGES) {
+    const n = medals[ch.id];
+    if (!n) continue;
+    any = true;
+    const span = document.createElement('span');
+    span.className = 'medal';
+    span.title = ch.name;
+    span.textContent = n > 1 ? `${ch.medal}×${n}` : ch.medal;
+    el.appendChild(span);
+  }
+  if (!any) {
+    const none = document.createElement('span');
+    none.className = 'no-medals';
+    none.textContent = 'Sin medallas';
+    el.appendChild(none);
+  }
+}
+
+function saveMedals() {
+  try { localStorage.setItem('medals', JSON.stringify(medals)); } catch (e) {}
+}
+
+function startChallenge() {
+  const ch = currentChallenge();
+  board = createBoard();
+  freezeLeft = 0;
+  dropAccum = 0;
+  challengeLeft = ch.timeMs;
+  challengeStartLines = lines;
+  challengeStartScore = score;
+  tetrisCount = 0;
+  bannerLeft = 0;
+  next = randomPiece();
+  spawn();
+  updateHUD();
+}
+
+function completeChallenge() {
+  const ch = CHALLENGES[challengeQueue.shift()];
+  score += ch.bonus;
+  medals[ch.id] = (medals[ch.id] || 0) + 1;
+  saveMedals();
+  renderMedals();
+  updateHUD();
+  if (!challengeQueue.length) {
+    gameOver = true;
+    cancelAnimationFrame(animId);
+    draw();
+    overlayTitle.textContent = '¡DESAFÍOS COMPLETADOS!';
+    overlayScore.textContent = `Puntuación: ${score.toLocaleString()}`;
+    overlay.classList.remove('hidden');
+    return;
+  }
+  bannerText = `¡LOGRADO! +${ch.bonus.toLocaleString()}`;
+  bannerMedal = ch.medal;
+  bannerLeft = BANNER_MS;
+}
+
+function failChallenge() {
+  challengeQueue.push(challengeQueue.shift());
+  bannerText = 'FALLIDO — volverá más tarde';
+  bannerMedal = '';
+  bannerLeft = BANNER_MS;
+}
+
+function checkChallenge() {
+  if (challengeProgress() >= currentChallenge().target) completeChallenge();
+  else if (challengeLeft <= 0) failChallenge();
 }
 
 function endGame() {
@@ -512,7 +657,20 @@ function togglePause() {
 function loop(ts) {
   const dt = ts - lastTime;
   lastTime = ts;
-  if (freezeLeft > 0) {
+  if (mode === 'desafio') {
+    if (bannerLeft > 0) {
+      bannerLeft -= dt;
+      if (bannerLeft <= 0) startChallenge();
+    } else {
+      challengeLeft -= dt;
+      checkChallenge();
+    }
+    updateChallengeHUD();
+    if (gameOver) return;
+  }
+  if (bannerLeft > 0) {
+    dropAccum = 0;
+  } else if (freezeLeft > 0) {
     freezeLeft = Math.max(0, freezeLeft - dt);
     dropAccum = 0;
   } else {
@@ -550,8 +708,14 @@ function init() {
   dropInterval = 1000;
   dropAccum = 0;
   lastTime = performance.now();
+  bannerLeft = 0;
   next = randomPiece();
   spawn();
+  if (mode === 'desafio') {
+    challengeQueue = CHALLENGES.map((_, i) => i);
+    startChallenge();
+  }
+  updateChallengeHUD();
   updateHUD();
   overlay.classList.add('hidden');
   cancelAnimationFrame(animId);
@@ -559,8 +723,9 @@ function init() {
 }
 
 document.addEventListener('keydown', e => {
+  if (inMenu) return;
   if (e.code === 'KeyP') { togglePause(); return; }
-  if (paused || gameOver) return;
+  if (paused || gameOver || bannerLeft > 0) return;
   switch (e.code) {
     case 'ArrowLeft':
       if (!collide(current.shape, current.x - 1, current.y)) current.x--;
@@ -585,6 +750,30 @@ document.addEventListener('keydown', e => {
 
 restartBtn.addEventListener('click', init);
 
+function showMenu() {
+  cancelAnimationFrame(animId);
+  inMenu = true;
+  overlay.classList.add('hidden');
+  renderMedals();
+  menuEl.classList.remove('hidden');
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  drawGrid();
+}
+
+function startGame(m) {
+  mode = m;
+  inMenu = false;
+  menuEl.classList.add('hidden');
+  init();
+}
+
+playClasicoBtn.addEventListener('click', () => { playClasicoBtn.blur(); startGame('clasico'); });
+playDesafioBtn.addEventListener('click', () => { playDesafioBtn.blur(); startGame('desafio'); });
+menuBtn.addEventListener('click', () => { menuBtn.blur(); showMenu(); });
+
+try { medals = JSON.parse(localStorage.getItem('medals')) || {}; } catch (e) { medals = {}; }
+renderMedals();
+
 function applyTheme(theme) {
   document.documentElement.dataset.theme = theme;
   themeBtn.textContent = theme === 'dark' ? '☀ Modo claro' : '🌙 Modo oscuro';
@@ -600,4 +789,4 @@ let savedTheme = null;
 try { savedTheme = localStorage.getItem('theme'); } catch (e) {}
 applyTheme(savedTheme === 'light' ? 'light' : 'dark');
 
-init();
+showMenu();

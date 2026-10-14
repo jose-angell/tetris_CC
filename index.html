@@ -15,6 +15,19 @@
       <canvas id="board" width="300" height="600"></canvas>
 
       <aside class="panel">
+        <div class="panel-section challenge" id="challenge-section" hidden>
+          <span class="label">DESAFÍO</span>
+          <span class="challenge-name" id="challenge-name"></span>
+          <span class="challenge-desc" id="challenge-desc"></span>
+          <span class="value small" id="challenge-progress">0/0</span>
+          <span class="value small" id="challenge-time">0:00</span>
+        </div>
+
+        <div class="panel-section" id="medals-section" hidden>
+          <span class="label">MEDALLAS</span>
+          <div class="medals" id="medals"></div>
+        </div>
+
         <div class="panel-section">
           <span class="label">SCORE</span>
           <span class="value" id="score">0</span>
@@ -54,7 +67,28 @@
       <div class="overlay-box">
         <p id="overlay-title">GAME OVER</p>
         <p id="overlay-score"></p>
-        <button id="restart-btn">Reiniciar</button>
+        <div class="overlay-actions">
+          <button id="restart-btn">Reiniciar</button>
+          <button id="menu-btn" class="secondary-btn">Menú</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="menu" class="overlay menu">
+      <div class="overlay-box menu-box">
+        <p class="menu-title">OPCIONES DE JUEGO</p>
+        <button id="play-clasico" class="menu-option">
+          <strong>🎮 Clásico</strong>
+          <small>Juega sin límite hasta llenar el tablero</small>
+        </button>
+        <button id="play-desafio" class="menu-option">
+          <strong>🏆 Desafío</strong>
+          <small>Niveles con objetivo y tiempo; gana medallas</small>
+        </button>
+        <div class="menu-medals">
+          <span class="label">MEDALLAS</span>
+          <div class="medals" id="menu-medals"></div>
+        </div>
       </div>
     </div>
   </div>
