@@ -29,6 +29,8 @@ Rayo power-up: every `RAYO_EVERY` (7) cleared lines, `addLines()` (shared by `cl
 
 Tinte power-up: every `TINTE_EVERY` (9) cleared lines, `addLines()` sets `tintePending` (tracked against `tintesAwarded`), and `spawn()` makes the new `next` a 1x1 Tinte (`TINTE_TYPE` 16; priority bomb > rayo > tinte). On lock, `tint()` takes the color of the block directly below (`tintTarget()`; none if floor or already wild) and converts every board cell of that color to `WILD` (17, board-only, `PIECES[17]` is null), then calls `clearLines()`. `isRowClear()` clears a row when its empty cells ≤ its `WILD` cells. `draw()` highlights the cells that will be converted as the ghost.
 
+Congelar power-up: every `CONGELAR_EVERY` (11) cleared lines, `addLines()` sets `congelarPending` (tracked against `congelarAwarded`), and `spawn()` makes the new `next` a 1x1 Congelar (`CONGELAR_TYPE` 18; priority bomb > rayo > tinte > congelar). On lock, `lockPiece()` sets `freezeLeft = FREEZE_MS` (5000) and places nothing on the board. `loop()` counts `freezeLeft` down by `dt` and skips gravity accumulation while it is > 0 (player movement/drops still work; pause stops the countdown since `lastTime` resets on resume). `draw()` tints the board and shows the countdown.
+
 Scoring: `LINE_SCORES[cleared] * level`, +1 per soft-drop cell, +2 per hard-drop cell, +`BOMB_CELL_SCORE * level` per cell destroyed by a bomb, +`RAYO_CELL_SCORE * level` per cell destroyed by a Rayo, +`TINTE_CELL_SCORE * level` per cell converted by a Tinte. Level = `floor(lines/10)+1`; `dropInterval = max(100, 1000 - (level-1)*90)`.
 
 Board canvas size (300x600) in `index.html` must stay consistent with `COLS * BLOCK` / `ROWS * BLOCK` in `game.js`.

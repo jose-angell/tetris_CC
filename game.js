@@ -23,6 +23,7 @@ const COLORS = [
   '#ffee58', // R - yellow (rayo vertical)
   '#e040fb', // T - magenta (tinte)
   '#ffffff', // W - blanco (comodín, solo en el tablero)
+  '#80deea', // C - celeste hielo (congelar)
 ];
 
 const PIECES = [
@@ -44,6 +45,7 @@ const PIECES = [
   [[15]],                                      // R vertical (rayo 1x1, power-up)
   [[16]],                                      // T (tinte 1x1, power-up)
   null,                                        // W (comodín: solo celda de tablero)
+  [[18]],                                      // C (congelar 1x1, power-up)
 ];
 
 const BOMB_TYPE = 13;
@@ -60,6 +62,10 @@ const WILD = 17;
 const TINTE_EVERY = 9;
 const TINTE_CELL_SCORE = 5;
 
+const CONGELAR_TYPE = 18;
+const CONGELAR_EVERY = 11;
+const FREEZE_MS = 5000;
+
 const LINE_SCORES = [0, 100, 300, 500, 800];
 
 const canvas = document.getElementById('board');
@@ -75,7 +81,7 @@ const overlayScore = document.getElementById('overlay-score');
 const restartBtn = document.getElementById('restart-btn');
 const themeBtn = document.getElementById('theme-toggle');
 
-let board, current, next, score, lines, level, paused, gameOver, lastTime, dropAccum, dropInterval, animId, bombsAwarded, bombPending, raysAwarded, rayPending, tintesAwarded, tintePending;
+let board, current, next, score, lines, level, paused, gameOver, lastTime, dropAccum, dropInterval, animId, bombsAwarded, bombPending, raysAwarded, rayPending, tintesAwarded, tintePending, congelarAwarded, congelarPending, freezeLeft;
 
 function createBoard() {
   return Array.from({ length: ROWS }, () => new Array(COLS).fill(0));
@@ -174,6 +180,10 @@ function addLines(n) {
     tintesAwarded = Math.floor(lines / TINTE_EVERY);
     tintePending = true;
   }
+  if (Math.floor(lines / CONGELAR_EVERY) > congelarAwarded) {
+    congelarAwarded = Math.floor(lines / CONGELAR_EVERY);
+    congelarPending = true;
+  }
   updateHUD();
 }
 
@@ -264,6 +274,9 @@ function lockPiece() {
     tint(current.x, current.y);
   } else if (current.type === RAYO_H || current.type === RAYO_V) {
     zap(current.x, current.y);
+  } else if (current.type === CONGELAR_TYPE) {
+    freezeLeft = FREEZE_MS;
+    dropAccum = 0;
   } else {
     merge();
     clearLines();
@@ -282,6 +295,9 @@ function spawn() {
   } else if (tintePending) {
     next = makePiece(TINTE_TYPE);
     tintePending = false;
+  } else if (congelarPending) {
+    next = makePiece(CONGELAR_TYPE);
+    congelarPending = false;
   } else {
     next = randomPiece();
   }
@@ -341,6 +357,22 @@ function drawBlock(context, x, y, colorIndex, size, alpha) {
     context.quadraticCurveTo(x * size + size - 4, y * size + size * 0.6, x * size + size / 2, y * size + size - 4);
     context.quadraticCurveTo(x * size + 4, y * size + size * 0.6, x * size + size / 2, y * size + 4);
     context.fill();
+    context.globalAlpha = 1;
+    return;
+  }
+  if (colorIndex === CONGELAR_TYPE) {
+    const cx = x * size + size / 2, cy = y * size + size / 2, rad = size / 2 - 5;
+    context.fillStyle = '#212121';
+    context.fillRect(x * size + 1, y * size + 1, size - 2, size - 2);
+    context.strokeStyle = color;
+    context.lineWidth = 2;
+    context.beginPath();
+    for (let i = 0; i < 3; i++) {
+      const a = (i * Math.PI) / 3;
+      context.moveTo(cx + Math.cos(a) * rad, cy + Math.sin(a) * rad);
+      context.lineTo(cx - Math.cos(a) * rad, cy - Math.sin(a) * rad);
+    }
+    context.stroke();
     context.globalAlpha = 1;
     return;
   }
@@ -430,6 +462,18 @@ function draw() {
   for (let r = 0; r < current.shape.length; r++)
     for (let c = 0; c < current.shape[r].length; c++)
       drawBlock(ctx, current.x + c, current.y + r, current.shape[r][c], BLOCK);
+
+  // congelado: tinte celeste + contador
+  if (freezeLeft > 0) {
+    ctx.globalAlpha = 0.12;
+    ctx.fillStyle = COLORS[CONGELAR_TYPE];
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.globalAlpha = 1;
+    ctx.fillStyle = COLORS[CONGELAR_TYPE];
+    ctx.font = 'bold 16px sans-serif';
+    ctx.textAlign = 'left';
+    ctx.fillText(`❄ ${Math.ceil(freezeLeft / 1000)}s`, 8, 22);
+  }
 }
 
 function drawNext() {
@@ -468,7 +512,12 @@ function togglePause() {
 function loop(ts) {
   const dt = ts - lastTime;
   lastTime = ts;
-  dropAccum += dt;
+  if (freezeLeft > 0) {
+    freezeLeft = Math.max(0, freezeLeft - dt);
+    dropAccum = 0;
+  } else {
+    dropAccum += dt;
+  }
   if (dropAccum >= dropInterval) {
     dropAccum = 0;
     if (!collide(current.shape, current.x, current.y + 1)) {
@@ -493,6 +542,9 @@ function init() {
   rayPending = false;
   tintesAwarded = 0;
   tintePending = false;
+  congelarAwarded = 0;
+  congelarPending = false;
+  freezeLeft = 0;
   paused = false;
   gameOver = false;
   dropInterval = 1000;
