@@ -127,6 +127,14 @@ function createBoard() {
   return Array.from({ length: ROWS }, () => new Array(COLS).fill(0));
 }
 
+function shuffle(arr) {
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
+
 function randomPiece() {
   return makePiece(Math.floor(Math.random() * (BOMB_TYPE - 1)) + 1);
 }
@@ -786,7 +794,7 @@ function init() {
   next = randomPiece();
   spawn();
   if (mode === 'desafio') {
-    challengeQueue = CHALLENGES.map((_, i) => i);
+    challengeQueue = shuffle(CHALLENGES.map((_, i) => i));
     startChallenge();
   }
   updateChallengeHUD();
