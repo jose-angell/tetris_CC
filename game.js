@@ -24,6 +24,7 @@ const COLORS = [
   '#e040fb', // T - magenta (tinte)
   '#ffffff', // W - blanco (comodín, solo en el tablero)
   '#80deea', // C - celeste hielo (congelar)
+  '#616161', // G - gris (basura, solo en el tablero)
 ];
 
 const PIECES = [
@@ -46,6 +47,7 @@ const PIECES = [
   [[16]],                                      // T (tinte 1x1, power-up)
   null,                                        // W (comodín: solo celda de tablero)
   [[18]],                                      // C (congelar 1x1, power-up)
+  null,                                        // G (basura: solo celda de tablero)
 ];
 
 const BOMB_TYPE = 13;
@@ -74,8 +76,10 @@ const CHALLENGES = [
   { id: 'punteria', name: 'Puntería', desc: 'Haz 5.000 puntos en 1:30', goal: 'score', target: 5000, timeMs: 90000, bonus: 2500, medal: '🎯' },
   { id: 'tetris', name: 'Tetris', desc: 'Limpia 4 líneas de golpe en 2:00', goal: 'tetris', target: 1, timeMs: 120000, bonus: 3000, medal: '💎' },
   { id: 'maraton', name: 'Maratón', desc: 'Limpia 40 líneas en 2:00', goal: 'lines', target: 40, timeMs: 120000, bonus: 5000, medal: '🥇' },
+  { id: 'supervivencia', name: 'Supervivencia', desc: 'Sobrevive 1:30 con basura subiendo cada 10 s', goal: 'survive', target: 90, timeMs: 90000, bonus: 4000, medal: '🛡️', garbageEvery: 10000 },
 ];
 const BANNER_MS = 2500;
+const GARBAGE = 19;
 
 const canvas = document.getElementById('board');
 const ctx = canvas.getContext('2d');
@@ -103,7 +107,7 @@ const playClasicoBtn = document.getElementById('play-clasico');
 const playDesafioBtn = document.getElementById('play-desafio');
 
 let board, current, next, score, lines, level, paused, gameOver, lastTime, dropAccum, dropInterval, animId, bombsAwarded, bombPending, raysAwarded, rayPending, tintesAwarded, tintePending, congelarAwarded, congelarPending, freezeLeft;
-let mode = 'clasico', challengeQueue = [], challengeLeft = 0, challengeStartLines = 0, challengeStartScore = 0, tetrisCount = 0, bannerLeft = 0, bannerText = '', bannerMedal = '', medals = {}, inMenu = true;
+let mode = 'clasico', challengeQueue = [], challengeLeft = 0, challengeStartLines = 0, challengeStartScore = 0, tetrisCount = 0, bannerLeft = 0, bannerText = '', bannerMedal = '', medals = {}, inMenu = true, garbageAccum = 0;
 
 function createBoard() {
   return Array.from({ length: ROWS }, () => new Array(COLS).fill(0));
@@ -536,6 +540,7 @@ function challengeProgress() {
   const ch = currentChallenge();
   if (ch.goal === 'lines') return lines - challengeStartLines;
   if (ch.goal === 'score') return score - challengeStartScore;
+  if (ch.goal === 'survive') return Math.floor((ch.timeMs - challengeLeft) / 1000);
   return tetrisCount;
 }
 
@@ -593,10 +598,19 @@ function startChallenge() {
   challengeStartLines = lines;
   challengeStartScore = score;
   tetrisCount = 0;
+  garbageAccum = 0;
   bannerLeft = 0;
   next = randomPiece();
   spawn();
   updateHUD();
+}
+
+function addGarbage() {
+  if (board[0].some(v => v)) { failChallenge(); return; }
+  const hole = Math.floor(Math.random() * COLS);
+  board.shift();
+  board.push(Array.from({ length: COLS }, (_, c) => (c === hole ? 0 : GARBAGE)));
+  if (collide(current.shape, current.x, current.y)) current.y--;
 }
 
 function completeChallenge() {
@@ -663,7 +677,15 @@ function loop(ts) {
       if (bannerLeft <= 0) startChallenge();
     } else {
       challengeLeft -= dt;
-      checkChallenge();
+      const every = currentChallenge().garbageEvery;
+      if (every) {
+        garbageAccum += dt;
+        if (garbageAccum >= every) {
+          garbageAccum = 0;
+          addGarbage();
+        }
+      }
+      if (bannerLeft <= 0) checkChallenge();
     }
     updateChallengeHUD();
     if (gameOver) return;
