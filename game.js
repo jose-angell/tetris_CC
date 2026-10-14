@@ -77,6 +77,17 @@ const CHALLENGES = [
   { id: 'tetris', name: 'Tetris', desc: 'Limpia 4 líneas de golpe en 2:00', goal: 'tetris', target: 1, timeMs: 120000, bonus: 3000, medal: '💎' },
   { id: 'maraton', name: 'Maratón', desc: 'Limpia 40 líneas en 2:00', goal: 'lines', target: 40, timeMs: 120000, bonus: 5000, medal: '🥇' },
   { id: 'supervivencia', name: 'Supervivencia', desc: 'Sobrevive 1:30 con basura subiendo cada 10 s', goal: 'survive', target: 90, timeMs: 90000, bonus: 4000, medal: '🛡️', garbageEvery: 10000 },
+  {
+    id: 'obstaculos', name: 'Obstáculos', desc: 'Limpia 10 líneas en 2:00 con el tablero ya con bloques', goal: 'lines', target: 10, timeMs: 120000, bonus: 3500, medal: '🧱',
+    preset: [
+      '##.#..#.##',
+      '.##.##.#.#',
+      '#.#..##.#.',
+      '#..##.#.##',
+      '.#.#.#..##',
+      '##..#.##.#',
+    ],
+  },
 ];
 const BANNER_MS = 2500;
 const GARBAGE = 19;
@@ -592,6 +603,12 @@ function saveMedals() {
 function startChallenge() {
   const ch = currentChallenge();
   board = createBoard();
+  if (ch.preset) {
+    ch.preset.forEach((row, i) => {
+      for (let c = 0; c < COLS; c++)
+        if (row[c] === '#') board[ROWS - ch.preset.length + i][c] = GARBAGE;
+    });
+  }
   freezeLeft = 0;
   dropAccum = 0;
   challengeLeft = ch.timeMs;
