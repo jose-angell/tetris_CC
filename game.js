@@ -89,6 +89,7 @@ const CHALLENGES = [
       '##..#.##.#',
     ],
   },
+  { id: 'inversa', name: 'Rotación inversa', desc: 'Limpia 10 líneas en 2:00; giro al revés y velocidad de nivel 10', goal: 'lines', target: 10, timeMs: 120000, bonus: 6000, medal: '🌀', reverseRotation: true, minSpeedLevel: 10 },
 ];
 const BANNER_MS = 2500;
 const GARBAGE = 19;
@@ -157,13 +158,22 @@ function rotateCW(shape) {
   return result;
 }
 
+function rotateCCW(shape) {
+  const rows = shape.length, cols = shape[0].length;
+  const result = Array.from({ length: cols }, () => new Array(rows).fill(0));
+  for (let r = 0; r < rows; r++)
+    for (let c = 0; c < cols; c++)
+      result[cols - 1 - c][r] = shape[r][c];
+  return result;
+}
+
 function tryRotate() {
   if (current.type === RAYO_H || current.type === RAYO_V) {
     current.type = current.type === RAYO_H ? RAYO_V : RAYO_H;
     current.shape = [[current.type]];
     return;
   }
-  const rotated = rotateCW(current.shape);
+  const rotated = activeChallenge()?.reverseRotation ? rotateCCW(current.shape) : rotateCW(current.shape);
   const kicks = [0, -1, 1, -2, 2];
   for (const kick of kicks) {
     if (!collide(rotated, current.x + kick, current.y)) {
@@ -204,11 +214,20 @@ function clearLines() {
   }
 }
 
+function activeChallenge() {
+  return mode === 'desafio' && challengeQueue.length > 0 && bannerLeft <= 0 ? currentChallenge() : null;
+}
+
+function updateDropInterval() {
+  const speedLevel = Math.max(level, activeChallenge()?.minSpeedLevel || 0);
+  dropInterval = Math.max(100, 1000 - (speedLevel - 1) * 90);
+}
+
 function addLines(n) {
   lines += n;
   revealLeft = REVEAL_MS;
   level = Math.floor(lines / 10) + 1;
-  dropInterval = Math.max(100, 1000 - (level - 1) * 90);
+  updateDropInterval();
   if (Math.floor(lines / BOMB_EVERY) > bombsAwarded) {
     bombsAwarded = Math.floor(lines / BOMB_EVERY);
     bombPending = true;
@@ -631,6 +650,7 @@ function startChallenge() {
   garbageAccum = 0;
   revealLeft = 0;
   bannerLeft = 0;
+  updateDropInterval();
   next = randomPiece();
   spawn();
   updateHUD();
