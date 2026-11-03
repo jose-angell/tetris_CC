@@ -67,6 +67,14 @@
       <div class="overlay-box">
         <p id="overlay-title">GAME OVER</p>
         <p id="overlay-score"></p>
+        <div id="record-entry" class="record-entry" hidden>
+          <span class="record-new">¡Nuevo récord!</span>
+          <div class="record-form">
+            <input id="name-input" type="text" maxlength="12" placeholder="Tu nombre" autocomplete="off" aria-label="Nombre del jugador" />
+            <button id="save-record-btn" type="button">Guardar</button>
+          </div>
+        </div>
+        <div id="overlay-records" class="records" hidden></div>
         <div class="overlay-actions">
           <button id="restart-btn">Reiniciar</button>
           <button id="menu-btn" class="secondary-btn">Menú</button>
@@ -88,6 +96,12 @@
         <div class="menu-medals">
           <span class="label">MEDALLAS</span>
           <div class="medals" id="menu-medals"></div>
+        </div>
+        <div class="menu-records">
+          <span class="label">RÉCORDS</span>
+          <div class="records" id="menu-records"></div>
+          <div class="record-stats" id="menu-stats"></div>
+          <button id="reset-records-btn" class="secondary-btn small-btn" type="button">Borrar récords</button>
         </div>
       </div>
     </div>
