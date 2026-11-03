@@ -128,7 +128,7 @@ const startLevelSel = document.getElementById('start-level');
 const RESUME_GRACE_MS = 250;
 
 let board, current, next, score, lines, level, paused, gameOver, lastTime, dropAccum, dropInterval, animId, bombsAwarded, bombPending, raysAwarded, rayPending, tintesAwarded, tintePending, congelarAwarded, congelarPending, freezeLeft;
-let startLevel = 1, resumeGraceUntil = 0;
+let startLevel = 1, baseLevel = 1, resumeGraceUntil = 0;
 let mode = 'clasico', challengeQueue = [], challengeLeft = 0, challengeStartLines = 0, challengeStartScore = 0, tetrisCount = 0, bannerLeft = 0, bannerText = '', bannerMedal = '', medals = {}, inMenu = true, garbageAccum = 0, revealLeft = 0;
 
 function createBoard() {
@@ -242,7 +242,7 @@ function updateDropInterval() {
 function addLines(n) {
   lines += n;
   revealLeft = REVEAL_MS;
-  level = startLevel + Math.floor(lines / 10);
+  level = baseLevel + Math.floor(lines / 10);
   updateDropInterval();
   if (Math.floor(lines / BOMB_EVERY) > bombsAwarded) {
     bombsAwarded = Math.floor(lines / BOMB_EVERY);
@@ -732,6 +732,7 @@ function togglePause() {
   } else {
     cancelAnimationFrame(animId);
     pauseControlsEl.hidden = true;
+    controlsBtn.textContent = 'Ver controles';
     pauseMenuEl.classList.remove('hidden');
     resumeBtn.focus();
   }
@@ -802,7 +803,8 @@ function init() {
   board = createBoard();
   score = 0;
   lines = 0;
-  level = startLevel;
+  baseLevel = startLevel;
+  level = baseLevel;
   bombsAwarded = 0;
   bombPending = false;
   raysAwarded = 0;
@@ -829,7 +831,6 @@ function init() {
   updateHUD();
   overlay.classList.add('hidden');
   pauseMenuEl.classList.add('hidden');
-  resumeGraceUntil = performance.now() + RESUME_GRACE_MS;
   cancelAnimationFrame(animId);
   animId = requestAnimationFrame(loop);
 }
