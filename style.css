@@ -274,6 +274,68 @@ kbd {
   justify-content: center;
 }
 
+/* ---- Menú de pausa ---- */
+.pause-menu {
+  z-index: 1;
+}
+
+.pause-box {
+  gap: 10px;
+}
+
+.pause-title {
+  font-size: 28px;
+  font-weight: 800;
+  letter-spacing: 4px;
+  color: var(--accent);
+}
+
+.pause-btn {
+  align-items: center;
+  font-weight: 700;
+}
+
+.pause-controls {
+  list-style: none;
+  width: 240px;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  text-align: left;
+  font-size: 13px;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.pause-controls[hidden] {
+  display: none;
+}
+
+.pause-level {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 14px;
+  color: var(--text);
+}
+
+.pause-level select {
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 6px 10px;
+  font-size: 14px;
+}
+
+.pause-hint {
+  font-size: 11px;
+  color: var(--muted);
+}
+
 .challenge[hidden] {
   display: none;
 }

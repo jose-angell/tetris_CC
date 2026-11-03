@@ -119,8 +119,16 @@ const menuEl = document.getElementById('menu');
 const menuBtn = document.getElementById('menu-btn');
 const playClasicoBtn = document.getElementById('play-clasico');
 const playDesafioBtn = document.getElementById('play-desafio');
+const pauseMenuEl = document.getElementById('pause-menu');
+const resumeBtn = document.getElementById('resume-btn');
+const pauseRestartBtn = document.getElementById('pause-restart-btn');
+const controlsBtn = document.getElementById('controls-btn');
+const pauseControlsEl = document.getElementById('pause-controls');
+const startLevelSel = document.getElementById('start-level');
+const RESUME_GRACE_MS = 250;
 
 let board, current, next, score, lines, level, paused, gameOver, lastTime, dropAccum, dropInterval, animId, bombsAwarded, bombPending, raysAwarded, rayPending, tintesAwarded, tintePending, congelarAwarded, congelarPending, freezeLeft;
+let startLevel = 1, resumeGraceUntil = 0;
 let mode = 'clasico', challengeQueue = [], challengeLeft = 0, challengeStartLines = 0, challengeStartScore = 0, tetrisCount = 0, bannerLeft = 0, bannerText = '', bannerMedal = '', medals = {}, inMenu = true, garbageAccum = 0, revealLeft = 0;
 
 function createBoard() {
@@ -234,7 +242,7 @@ function updateDropInterval() {
 function addLines(n) {
   lines += n;
   revealLeft = REVEAL_MS;
-  level = Math.floor(lines / 10) + 1;
+  level = startLevel + Math.floor(lines / 10);
   updateDropInterval();
   if (Math.floor(lines / BOMB_EVERY) > bombsAwarded) {
     bombsAwarded = Math.floor(lines / BOMB_EVERY);
@@ -714,17 +722,36 @@ function endGame() {
 }
 
 function togglePause() {
-  if (gameOver) return;
+  if (gameOver || inMenu || bannerLeft > 0) return;
   paused = !paused;
   if (!paused) {
+    pauseMenuEl.classList.add('hidden');
     lastTime = performance.now();
+    resumeGraceUntil = lastTime + RESUME_GRACE_MS;
     loop(lastTime);
   } else {
     cancelAnimationFrame(animId);
-    overlayTitle.textContent = 'PAUSA';
-    overlayScore.textContent = '';
-    overlay.classList.remove('hidden');
+    pauseControlsEl.hidden = true;
+    pauseMenuEl.classList.remove('hidden');
+    resumeBtn.focus();
   }
+}
+
+function saveStartLevel() {
+  try { localStorage.setItem('startLevel', String(startLevel)); } catch (e) {}
+}
+
+function initStartLevel() {
+  for (let i = 1; i <= 10; i++) {
+    const opt = document.createElement('option');
+    opt.value = String(i);
+    opt.textContent = String(i);
+    startLevelSel.appendChild(opt);
+  }
+  let saved = 1;
+  try { saved = parseInt(localStorage.getItem('startLevel'), 10); } catch (e) {}
+  startLevel = saved >= 1 && saved <= 10 ? saved : 1;
+  startLevelSel.value = String(startLevel);
 }
 
 function loop(ts) {
@@ -775,7 +802,7 @@ function init() {
   board = createBoard();
   score = 0;
   lines = 0;
-  level = 1;
+  level = startLevel;
   bombsAwarded = 0;
   bombPending = false;
   raysAwarded = 0;
@@ -797,17 +824,24 @@ function init() {
     challengeQueue = shuffle(CHALLENGES.map((_, i) => i));
     startChallenge();
   }
+  updateDropInterval();
   updateChallengeHUD();
   updateHUD();
   overlay.classList.add('hidden');
+  pauseMenuEl.classList.add('hidden');
+  resumeGraceUntil = performance.now() + RESUME_GRACE_MS;
   cancelAnimationFrame(animId);
   animId = requestAnimationFrame(loop);
 }
 
 document.addEventListener('keydown', e => {
   if (inMenu) return;
-  if (e.code === 'KeyP') { togglePause(); return; }
+  if (e.code === 'KeyP' || e.code === 'Escape') {
+    if (!e.repeat) togglePause();
+    return;
+  }
   if (paused || gameOver || bannerLeft > 0) return;
+  if (performance.now() < resumeGraceUntil) return;
   switch (e.code) {
     case 'ArrowLeft':
       if (!collide(current.shape, current.x - 1, current.y)) current.x--;
@@ -832,9 +866,25 @@ document.addEventListener('keydown', e => {
 
 restartBtn.addEventListener('click', init);
 
+resumeBtn.addEventListener('click', () => { resumeBtn.blur(); togglePause(); });
+pauseRestartBtn.addEventListener('click', () => { pauseRestartBtn.blur(); init(); });
+controlsBtn.addEventListener('click', () => {
+  controlsBtn.blur();
+  pauseControlsEl.hidden = !pauseControlsEl.hidden;
+  controlsBtn.textContent = pauseControlsEl.hidden ? 'Ver controles' : 'Ocultar controles';
+});
+startLevelSel.addEventListener('change', () => {
+  startLevel = parseInt(startLevelSel.value, 10) || 1;
+  saveStartLevel();
+  startLevelSel.blur();
+});
+initStartLevel();
+
 function showMenu() {
   cancelAnimationFrame(animId);
   inMenu = true;
+  paused = false;
+  pauseMenuEl.classList.add('hidden');
   overlay.classList.add('hidden');
   renderMedals();
   menuEl.classList.remove('hidden');
