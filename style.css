@@ -77,7 +77,7 @@ body {
 #board {
   display: block;
   border: 1px solid var(--border);
-  background: var(--surface);
+  background: var(--board-bg, var(--surface));
   border-radius: 4px;
   box-shadow: 0 0 40px var(--shadow);
 }
@@ -115,7 +115,7 @@ body {
 #next-canvas {
   display: block;
   border: 1px solid var(--border);
-  background: var(--surface);
+  background: var(--board-bg, var(--surface));
   border-radius: 4px;
 }
 
@@ -335,4 +335,33 @@ kbd {
 
 .theme-toggle:hover {
   border-color: var(--accent);
+}
+
+/* ---- Skins ---- */
+[data-skin="neon"] { --board-bg: #000; --grid: #1a1a33; }
+[data-skin="pastel"] { --board-bg: #2b2840; --grid: #3a3656; }
+[data-skin="pastel"][data-theme="light"] { --board-bg: #fff8fc; --grid: #f0e4f2; }
+[data-skin="pixel"] { --board-bg: #15151f; --grid: #262636; }
+[data-skin="pixel"][data-theme="light"] { --board-bg: #e8e8dc; --grid: #d2d2c2; }
+[data-skin="neon"] #board { box-shadow: 0 0 24px rgba(0, 240, 255, 0.35); }
+
+.skin-select {
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 6px 8px;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.skin-select:hover {
+  border-color: var(--accent);
+}
+
+.menu-skin {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  align-items: center;
 }

@@ -4,7 +4,13 @@ const COLS = 10;
 const ROWS = 20;
 const BLOCK = 30;
 
-const COLORS = [
+let COLORS;
+
+
+// ---- Skins (temas visuales) ----
+// Cada skin: nombre, paleta (mismos índices que PIECES) y función draw(c, px, py, size, color)
+// que dibuja un bloque genérico en la esquina (px, py) de una celda de lado `size`.
+const RETRO_COLORS = [
   null,
   '#4dd0e1', // I - cyan
   '#ffd54f', // O - yellow
@@ -26,6 +32,101 @@ const COLORS = [
   '#80deea', // C - celeste hielo (congelar)
   '#616161', // G - gris (basura, solo en el tablero)
 ];
+
+const NEON_COLORS = [
+  null,
+  '#00f0ff', '#ffee00', '#d500f9', '#00ff66', '#ff1744', '#3d5afe', '#ff9100',
+  '#b0bec5', '#ff4081', '#1de9b6', '#c6ff00', '#ffab00',
+  '#ff1744', '#ffff00', '#ffff00', '#ea00ff', '#ffffff', '#40e0ff', '#78909c',
+];
+
+const PASTEL_COLORS = [
+  null,
+  '#a8e6ef', '#fff3b0', '#d9b8f0', '#b8e8c0', '#f8b8b8', '#b8c4f0', '#fcd5a5',
+  '#cfd8dc', '#f8bbd9', '#b2dfdb', '#dcedc8', '#ffe0b2',
+  '#ff8a80', '#fff59d', '#fff59d', '#e1bee7', '#ffffff', '#b3ecf5', '#b0bec5',
+];
+
+const PIXEL_COLORS = [
+  null,
+  '#29b6f6', '#fdd835', '#ab47bc', '#66bb6a', '#ef5350', '#5c6bc0', '#ffa726',
+  '#78909c', '#ec407a', '#26a69a', '#9ccc65', '#ff9800',
+  '#f44336', '#ffeb3b', '#ffeb3b', '#d500f9', '#ffffff', '#4dd0e1', '#616161',
+];
+
+function roundedRectPath(c, x, y, w, h, r) {
+  c.beginPath();
+  c.moveTo(x + r, y);
+  c.arcTo(x + w, y, x + w, y + h, r);
+  c.arcTo(x + w, y + h, x, y + h, r);
+  c.arcTo(x, y + h, x, y, r);
+  c.arcTo(x, y, x + w, y, r);
+  c.closePath();
+}
+
+const SKINS = {
+  retro: {
+    name: 'Retro',
+    colors: RETRO_COLORS,
+    draw(c, px, py, size, color) {
+      c.fillStyle = color;
+      c.fillRect(px + 1, py + 1, size - 2, size - 2);
+      c.fillStyle = 'rgba(255,255,255,0.12)';
+      c.fillRect(px + 1, py + 1, size - 2, 4);
+    },
+  },
+  neon: {
+    name: 'Neon',
+    colors: NEON_COLORS,
+    draw(c, px, py, size, color) {
+      const a = c.globalAlpha;
+      c.shadowColor = color;
+      c.shadowBlur = size * 0.4;
+      c.fillStyle = color;
+      c.globalAlpha = a * 0.28;
+      c.fillRect(px + 2, py + 2, size - 4, size - 4);
+      c.globalAlpha = a;
+      c.strokeStyle = color;
+      c.lineWidth = 2;
+      c.strokeRect(px + 3, py + 3, size - 6, size - 6);
+      c.shadowBlur = 0;
+      c.shadowColor = 'transparent';
+    },
+  },
+  pastel: {
+    name: 'Pastel',
+    colors: PASTEL_COLORS,
+    draw(c, px, py, size, color) {
+      roundedRectPath(c, px + 1.5, py + 1.5, size - 3, size - 3, size * 0.28);
+      c.fillStyle = color;
+      c.fill();
+      roundedRectPath(c, px + size * 0.2, py + size * 0.14, size * 0.6, size * 0.16, size * 0.08);
+      c.fillStyle = 'rgba(255,255,255,0.45)';
+      c.fill();
+    },
+  },
+  pixel: {
+    name: 'Pixel art',
+    colors: PIXEL_COLORS,
+    draw(c, px, py, size, color) {
+      const n = 4, inner = size - 2, s = inner / n;
+      c.fillStyle = color;
+      c.fillRect(px + 1, py + 1, inner, inner);
+      for (let i = 0; i < n; i++) {
+        for (let j = 0; j < n; j++) {
+          if ((i + j) % 2) continue;
+          c.fillStyle = i + j < n - 1 ? 'rgba(255,255,255,0.25)' : 'rgba(0,0,0,0.22)';
+          c.fillRect(px + 1 + i * s, py + 1 + j * s, s, s);
+        }
+      }
+      c.strokeStyle = 'rgba(0,0,0,0.5)';
+      c.lineWidth = 1;
+      c.strokeRect(px + 1.5, py + 1.5, inner - 1, inner - 1);
+    },
+  },
+};
+let skin = 'retro';
+COLORS = SKINS.retro.colors;
 
 const PIECES = [
   null,
@@ -119,6 +220,7 @@ const menuEl = document.getElementById('menu');
 const menuBtn = document.getElementById('menu-btn');
 const playClasicoBtn = document.getElementById('play-clasico');
 const playDesafioBtn = document.getElementById('play-desafio');
+const skinSelects = document.querySelectorAll('.skin-select');
 
 let board, current, next, score, lines, level, paused, gameOver, lastTime, dropAccum, dropInterval, animId, bombsAwarded, bombPending, raysAwarded, rayPending, tintesAwarded, tintePending, congelarAwarded, congelarPending, freezeLeft;
 let mode = 'clasico', challengeQueue = [], challengeLeft = 0, challengeStartLines = 0, challengeStartScore = 0, tetrisCount = 0, bannerLeft = 0, bannerText = '', bannerMedal = '', medals = {}, inMenu = true, garbageAccum = 0, revealLeft = 0;
@@ -460,11 +562,7 @@ function drawBlock(context, x, y, colorIndex, size, alpha) {
     context.globalAlpha = 1;
     return;
   }
-  context.fillStyle = color;
-  context.fillRect(x * size + 1, y * size + 1, size - 2, size - 2);
-  // highlight
-  context.fillStyle = 'rgba(255,255,255,0.12)';
-  context.fillRect(x * size + 1, y * size + 1, size - 2, 4);
+  SKINS[skin].draw(context, x * size, y * size, size, color);
   context.globalAlpha = 1;
 }
 
@@ -805,6 +903,7 @@ function init() {
 }
 
 document.addEventListener('keydown', e => {
+  if (e.target.tagName === 'SELECT') e.target.blur();
   if (inMenu) return;
   if (e.code === 'KeyP') { togglePause(); return; }
   if (paused || gameOver || bannerLeft > 0) return;
@@ -860,6 +959,7 @@ function applyTheme(theme) {
   document.documentElement.dataset.theme = theme;
   themeBtn.textContent = theme === 'dark' ? '☀ Modo claro' : '🌙 Modo oscuro';
   try { localStorage.setItem('theme', theme); } catch (e) {}
+  redrawAll();
 }
 
 themeBtn.addEventListener('click', () => {
@@ -867,8 +967,46 @@ themeBtn.addEventListener('click', () => {
   themeBtn.blur(); // evita que Space active el botón durante el juego
 });
 
+function redrawAll() {
+  if (inMenu) {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    drawGrid();
+    nextCtx.clearRect(0, 0, nextCanvas.width, nextCanvas.height);
+  } else {
+    draw();
+    drawNext();
+  }
+}
+
+function applySkin(name) {
+  if (!SKINS[name]) name = 'retro';
+  skin = name;
+  COLORS = SKINS[name].colors;
+  document.documentElement.dataset.skin = name;
+  skinSelects.forEach(sel => { sel.value = name; });
+  try { localStorage.setItem('skin', name); } catch (e) {}
+  redrawAll();
+}
+
+skinSelects.forEach(sel => {
+  for (const key of Object.keys(SKINS)) {
+    const opt = document.createElement('option');
+    opt.value = key;
+    opt.textContent = SKINS[key].name;
+    sel.appendChild(opt);
+  }
+  sel.addEventListener('change', () => {
+    applySkin(sel.value);
+    sel.blur(); // evita que Space/flechas actúen sobre el selector durante el juego
+  });
+});
+
+let savedSkin = null;
+try { savedSkin = localStorage.getItem('skin'); } catch (e) {}
+
 let savedTheme = null;
 try { savedTheme = localStorage.getItem('theme'); } catch (e) {}
 applyTheme(savedTheme === 'light' ? 'light' : 'dark');
 
+applySkin(SKINS[savedSkin] ? savedSkin : 'retro');
 showMenu();
