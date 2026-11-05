@@ -419,3 +419,39 @@ kbd {
 .theme-toggle:hover {
   border-color: var(--accent);
 }
+
+/* ---- Selector de skin ---- */
+.skin-picker select {
+  width: 100%;
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 7px 10px;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+/* Neón: fondo negro y rejilla tenue */
+[data-skin="neon"] #board,
+[data-skin="neon"] #next-canvas {
+  background: #000;
+  border-color: #00f0ff;
+  box-shadow: 0 0 24px rgba(0, 240, 255, 0.45);
+}
+[data-skin="neon"] { --grid: #101a22; }
+
+/* Pastel: fondo suave */
+[data-skin="pastel"] #board,
+[data-skin="pastel"] #next-canvas {
+  background: #5e5675;
+  border-radius: 12px;
+}
+[data-skin="pastel"] { --grid: #6e6687; }
+
+/* Pixel art: marco grueso */
+[data-skin="pixel"] #board,
+[data-skin="pixel"] #next-canvas {
+  border-width: 4px;
+  border-radius: 0;
+}
