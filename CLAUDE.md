@@ -21,7 +21,7 @@ Three files: `index.html` (DOM + canvases), `style.css`, and `game.js` (all logi
 - Piece lifecycle: `lockPiece()` → `merge()` → `clearLines()` (updates score/level/`dropInterval`) → `spawn()` (promotes `next`, game over if the spawn collides).
 - Rotation is `rotateCW` plus horizontal wall kicks `[0,-1,1,-2,2]` in `tryRotate` (not SRS). `collide()` is the single collision check used for movement, rotation, ghost, and spawn.
 - Input is one `keydown` listener (arrows, X/Up rotate, Space hard drop, P pause); it ignores input while paused/game over.
-- Overlay (`#overlay`) is shared by PAUSA and GAME OVER; toggled with the `hidden` class.
+- Overlay (`#overlay`) is used for GAME OVER / completed; toggled with the `hidden` class. Pause has its own `#pause-menu` (P or Escape): Reanudar, Reiniciar (`init()`), Ver controles (swaps `#pause-main`/`#pause-controls` via `showPauseView()`), and a `startLevel` selector (1–`MAX_START_LEVEL`) applied by `init()` (sets `lines=(startLevel-1)*10` and the power-up `*Awarded` counters so none fire immediately). While paused the keydown handler ignores game input, and `inputBlockUntil` blocks input for 200 ms after resuming.
 
 Bomb power-up: every `BOMB_EVERY` (5) cleared lines, `clearLines()` sets `bombPending` (tracked against `bombsAwarded`), and `spawn()` makes the new `next` a 1x1 bomb (`BOMB_TYPE` 13, excluded from `randomPiece`'s draw; built via `makePiece`). When a bomb locks, `lockPiece()` calls `explode()` instead of merge/clearLines: it clears the 3x3 around the bomb with no gravity. `draw()` shows the 3x3 blast area as the ghost.
 

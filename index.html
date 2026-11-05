@@ -74,6 +74,36 @@
       </div>
     </div>
 
+    <div id="pause-menu" class="overlay pause-menu hidden">
+      <div class="overlay-box menu-box">
+        <p class="pause-title">PAUSA</p>
+        <div id="pause-main" class="overlay-box">
+          <button id="resume-btn" class="pause-btn primary">Reanudar</button>
+          <button id="pause-restart-btn" class="pause-btn">Reiniciar</button>
+          <button id="controls-btn" class="pause-btn">Ver controles</button>
+          <div class="level-select">
+            <span class="label">NIVEL INICIAL</span>
+            <div class="level-row">
+              <button id="level-down" class="level-btn" aria-label="Bajar nivel inicial">−</button>
+              <span id="start-level" class="value small">1</span>
+              <button id="level-up" class="level-btn" aria-label="Subir nivel inicial">+</button>
+            </div>
+            <small>Se aplica al reiniciar</small>
+          </div>
+        </div>
+        <div id="pause-controls" class="overlay-box" hidden>
+          <ul class="pause-keys">
+            <li><kbd>←</kbd><kbd>→</kbd> mover</li>
+            <li><kbd>↑</kbd> / <kbd>X</kbd> rotar</li>
+            <li><kbd>↓</kbd> bajar</li>
+            <li><kbd>Space</kbd> caída instantánea</li>
+            <li><kbd>P</kbd> / <kbd>Esc</kbd> pausa</li>
+          </ul>
+          <button id="controls-back" class="pause-btn">Volver</button>
+        </div>
+      </div>
+    </div>
+
     <div id="menu" class="overlay menu">
       <div class="overlay-box menu-box">
         <p class="menu-title">OPCIONES DE JUEGO</p>
